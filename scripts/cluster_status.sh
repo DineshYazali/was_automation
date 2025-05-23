@@ -2,3 +2,4 @@
 
 pwd
 echo "Hello! Dinesh Yazali"
+echo "$1"

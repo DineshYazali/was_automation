@@ -35,7 +35,8 @@ def execute_action():
             sftp.chmod(remote_script_path, 0o755)
             sftp.close()
 
-            stdin, stdout, stderr = ssh.exec_command(f'bash {remote_script_path}')
+            #stdin, stdout, stderr = ssh.exec_command(f'bash {remote_script_path}')
+            stdin, stdout, stderr = ssh.exec_command(f'bash {remote_script_path} {data.get('domain', '')}')
             output = stdout.read().decode('utf-8')
             error_output = stderr.read().decode('utf-8')
             ssh.close()
