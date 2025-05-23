@@ -16,8 +16,11 @@ def execute_action():
     odr_node = data.get('odrNode')
 
     # Accept SSH username and password from frontend, or set here for testing
-    ssh_user = data.get('sshUser', 'YOUR_SSH_USERNAME')
-    ssh_password = data.get('sshPassword', 'YOUR_SSH_PASSWORD')
+    # ssh_user = data.get('sshUser', 'YOUR_SSH_USERNAME')
+    # ssh_password = data.get('sshPassword', 'YOUR_SSH_PASSWORD')
+
+    ssh_user = 'dinesh'
+    ssh_password= 'Slavia@9954'
 
     if action == 'was-cell-status':
         ssh_host = odr_node
