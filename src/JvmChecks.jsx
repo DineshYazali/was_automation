@@ -15,7 +15,7 @@ export default function JvmChecks() {
     setShowResult(false);
 
     try {
-      const response = await fetch("/api/execute-action", {
+      const response = await fetch("http://localhost:5000/api/execute-action", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -196,11 +196,13 @@ export default function JvmChecks() {
 
         {showResult && (
           <div className="px-8 pb-8">
-            <div className="mt-2 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="mt-2 p-4 bg-purple-50 border border-purple-200 rounded-lg max-h-80 overflow-auto">
               <h3 className="text-sm font-medium text-purple-800 mb-2">
                 Operation Result:
               </h3>
-              <p className="text-sm text-purple-700">{result}</p>
+              <p className="text-sm font-mono text-purple-700 whitespace-pre-wrap">
+                {result}
+              </p>
             </div>
           </div>
         )}
