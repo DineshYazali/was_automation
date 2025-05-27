@@ -6,50 +6,68 @@ import paramiko
 app = Flask(__name__)
 CORS(app)
 
-# Path to your shell script relative to this file
-SCRIPT_LOCAL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'scripts', 'cluster_status.sh'))
+def execute_remote_script(ssh_host, ssh_user, ssh_password, script_name, script_args=None):
+    """
+    Handles SSH connection, uploads the script, executes it with arguments, and returns output/error.
+    """
+    script_args = script_args or []
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=ssh_host, username=ssh_user, password=ssh_password)
+
+        sftp = ssh.open_sftp()
+        remote_script_path = f'/tmp/{script_name}'
+        script_local_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', 'scripts', script_name)
+        )
+        sftp.put(script_local_path, remote_script_path)
+        sftp.chmod(remote_script_path, 0o755)
+        sftp.close()
+
+        command = f"bash {remote_script_path} {' '.join(script_args)}"
+        stdin, stdout, stderr = ssh.exec_command(command)
+        output = stdout.read().decode('utf-8')
+        error_output = stderr.read().decode('utf-8')
+        ssh.close()
+
+        if error_output:
+            result = f"Error:\n{error_output}\nOutput:\n{output}"
+        else:
+            result = output
+
+        return result, None
+    except Exception as e:
+        return None, str(e)
 
 @app.route('/api/execute-action', methods=['POST'])
 def execute_action():
     data = request.json
     action = data.get('selectedAction')
     odr_node = data.get('odrNode')
-
-    # Accept SSH username and password from frontend, or set here for testing
-    # ssh_user = data.get('sshUser', 'YOUR_SSH_USERNAME')
-    # ssh_password = data.get('sshPassword', 'YOUR_SSH_PASSWORD')
-
     ssh_user = 'dinesh'
-    ssh_password= 'Slavia@9954'
+    ssh_password = 'Slavia@9954'
 
-    if action == 'was-cell-status':
-        ssh_host = odr_node
-        try:
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(hostname=ssh_host, username=ssh_user, password=ssh_password)
+    # Map actions to script names
+    action_script_map = {
+        'was-cell-status': 'cluster_status.sh',
+        'jdbc-test': 'jdbctest.sh',
+        'cycle-jvm': 'cycle_jvms.sh'
+    }
 
-            sftp = ssh.open_sftp()
-            remote_script_path = '/tmp/cluster_status.sh'
-            sftp.put(SCRIPT_LOCAL_PATH, remote_script_path)
-            sftp.chmod(remote_script_path, 0o755)
-            sftp.close()
-
-            #stdin, stdout, stderr = ssh.exec_command(f'bash {remote_script_path}')
-            stdin, stdout, stderr = ssh.exec_command(f'bash {remote_script_path} {data.get('domain', '')}')
-            output = stdout.read().decode('utf-8')
-            error_output = stderr.read().decode('utf-8')
-            ssh.close()
-
-            if error_output:
-                result = f"Error:\n{error_output}\nOutput:\n{output}"
-            else:
-                result = output
-
-            return jsonify({'result': result})
-
-        except Exception as e:
-            return jsonify({'result': f'Exception: {str(e)}'}), 500
+    script_name = action_script_map.get(action)
+    if script_name:
+        args = [data.get('domain', '')]
+        result, error = execute_remote_script(
+            ssh_host=odr_node,
+            ssh_user=ssh_user,
+            ssh_password=ssh_password,
+            script_name=script_name,
+            script_args=args
+        )
+        if error:
+            return jsonify({'result': f'Exception: {error}'}), 500
+        return jsonify({'result': result})
 
     return jsonify({'result': 'Action not implemented'}), 400
 
